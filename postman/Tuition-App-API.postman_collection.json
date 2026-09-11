@@ -1,0 +1,133 @@
+{
+  "info": {
+    "name": "Tuition App API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "studentId", "value": "" },
+    { "key": "homeworkId", "value": "" },
+    { "key": "testId", "value": "" },
+    { "key": "attemptId", "value": "" },
+    { "key": "feeId", "value": "" },
+    { "key": "paymentId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Parent",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": { "mode": "raw", "raw": "{\"parentName\":\"Rahul Sharma\",\"email\":\"new.parent@gmail.com\",\"phone\":\"9876543210\",\"studentName\":\"Aarav Sharma\",\"password\":\"parent123\"}" }
+          }
+        },
+        {
+          "name": "Login - Parent",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\"email\":\"rahul@gmail.com\",\"password\":\"parent123\"}" }
+          }
+        },
+        { "name": "Forgot Password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/auth/forgot-password", "body": { "mode": "raw", "raw": "{\"email\":\"rahul@gmail.com\"}" } } },
+        { "name": "Me", "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" } },
+        { "name": "Logout", "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" } }
+      ]
+    },
+    {
+      "name": "Parent",
+      "item": [
+        { "name": "Parent Profile", "request": { "method": "GET", "url": "{{baseUrl}}/parents/me" } },
+        { "name": "Update Parent Profile", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/parents/me", "body": { "mode": "raw", "raw": "{\"name\":\"Rahul Sharma\",\"phone\":\"9876543211\"}" } } },
+        { "name": "Parent Students", "request": { "method": "GET", "url": "{{baseUrl}}/parents/me/students" } },
+        { "name": "Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/parent/dashboard" } },
+        { "name": "Profile Alias", "request": { "method": "GET", "url": "{{baseUrl}}/profile" } }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        { "name": "Create Student", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/students", "body": { "mode": "raw", "raw": "{\"name\":\"Aarav Sharma\",\"class\":\"8\",\"section\":\"A\",\"rollNumber\":\"21\",\"parentId\":\"PAR_ID\",\"subjects\":[\"Mathematics\",\"Science\"],\"status\":\"active\"}" } } },
+        { "name": "Get Student", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}" } },
+        { "name": "Update Student", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/students/{{studentId}}", "body": { "mode": "raw", "raw": "{\"section\":\"B\"}" } } },
+        { "name": "Deactivate Student", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/students/{{studentId}}/status", "body": { "mode": "raw", "raw": "{\"status\":\"inactive\"}" } } }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        { "name": "Get Attendance", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/attendance?month=9&year=2026" } },
+        { "name": "Mark Attendance", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/attendance", "body": { "mode": "raw", "raw": "{\"studentId\":\"{{studentId}}\",\"date\":\"2026-09-11\",\"status\":\"present\"}" } } },
+        { "name": "Bulk Attendance", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/attendance/bulk", "body": { "mode": "raw", "raw": "{\"date\":\"2026-09-11\",\"records\":[{\"studentId\":\"{{studentId}}\",\"status\":\"present\"}]}" } } }
+      ]
+    },
+    {
+      "name": "Homework",
+      "item": [
+        { "name": "Create Homework", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/homework", "body": { "mode": "raw", "raw": "{\"studentId\":\"{{studentId}}\",\"subject\":\"Mathematics\",\"title\":\"Exercise 5.2\",\"description\":\"Solve questions 1-10\",\"assignedDate\":\"2026-09-11\",\"dueDate\":\"2026-09-13\"}" } } },
+        { "name": "Get Homework", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/homework?status=pending" } },
+        { "name": "Homework Status", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/homework/{{homeworkId}}/status", "body": { "mode": "raw", "raw": "{\"status\":\"completed\"}" } } }
+      ]
+    },
+    {
+      "name": "Tests",
+      "item": [
+        { "name": "Create Test", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/tests", "body": { "mode": "raw", "raw": "{\"title\":\"Algebra & Linear Equations\",\"subject\":\"Mathematics\",\"class\":\"8\",\"date\":\"2026-09-15\",\"startTime\":\"10:00\",\"durationMinutes\":45,\"totalMarks\":30}" } } },
+        { "name": "Upcoming Tests", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/tests/upcoming" } },
+        { "name": "Questions", "request": { "method": "GET", "url": "{{baseUrl}}/tests/{{testId}}/questions" } },
+        { "name": "Start Test", "request": { "method": "POST", "url": "{{baseUrl}}/tests/{{testId}}/start" } },
+        { "name": "Submit Answer", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/test-attempts/{{attemptId}}/answers", "body": { "mode": "raw", "raw": "{\"questionId\":\"QUESTION_ID\",\"answer\":\"5\"}" } } },
+        { "name": "Submit Test", "request": { "method": "POST", "url": "{{baseUrl}}/test-attempts/{{attemptId}}/submit" } }
+      ]
+    },
+    {
+      "name": "Results Progress Study",
+      "item": [
+        { "name": "Results", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/results" } },
+        { "name": "Progress", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/progress" } },
+        { "name": "Weak Subjects", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/weak-subjects" } },
+        { "name": "Notes", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/notes?subject=Mathematics" } },
+        { "name": "Syllabus", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/syllabus" } }
+      ]
+    },
+    {
+      "name": "Fees Payments",
+      "item": [
+        { "name": "Fee Summary", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/fees" } },
+        { "name": "Create Payment Order", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/payments/create-order", "body": { "mode": "raw", "raw": "{\"feeId\":\"{{feeId}}\",\"amount\":4000}" } } },
+        { "name": "Verify Payment", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/payments/verify", "body": { "mode": "raw", "raw": "{\"feeId\":\"{{feeId}}\",\"amount\":4000,\"transactionId\":\"TXN123\"}" } } },
+        { "name": "Payment History", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/payments" } },
+        { "name": "Receipt", "request": { "method": "GET", "url": "{{baseUrl}}/payments/{{paymentId}}/receipt" } }
+      ]
+    },
+    {
+      "name": "Communication",
+      "item": [
+        { "name": "Announcements", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/announcements" } },
+        { "name": "Notifications", "request": { "method": "GET", "url": "{{baseUrl}}/notifications" } },
+        { "name": "Mark All Read", "request": { "method": "PATCH", "url": "{{baseUrl}}/notifications/read-all" } }
+      ]
+    },
+    {
+      "name": "Tutor Admin",
+      "item": [
+        { "name": "Tutor Students", "request": { "method": "GET", "url": "{{baseUrl}}/tutors/me/students" } },
+        { "name": "Tutor Classes", "request": { "method": "GET", "url": "{{baseUrl}}/tutors/me/classes" } },
+        { "name": "Admin Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/admin/dashboard" } },
+        { "name": "Admin Students", "request": { "method": "GET", "url": "{{baseUrl}}/admin/students" } },
+        { "name": "Admin Parents", "request": { "method": "GET", "url": "{{baseUrl}}/admin/parents" } },
+        { "name": "Admin Tutors", "request": { "method": "GET", "url": "{{baseUrl}}/admin/tutors" } }
+      ]
+    }
+  ]
+}
