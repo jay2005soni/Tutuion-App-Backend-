@@ -1,2 +1,9 @@
 # Dependencies
 node_modules/
+
+# Environment and Firebase secrets
+.env
+.env.example
+serviceAccountKey.json
+firebase-service-account.json
+*-service-account.json

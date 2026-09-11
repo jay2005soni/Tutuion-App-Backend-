@@ -54,9 +54,13 @@ Authorization: Bearer <TOKEN>
 
 ## Firebase/Database Notes
 
-This scaffold currently uses an in-memory store in `src/config/database.js` so Flutter integration can begin quickly. Replace that file with Firebase Admin SDK, Firestore, MongoDB, PostgreSQL, or another database layer for production.
+Firebase Admin SDK dependency and config files are now added. Read [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) before connecting a real project.
+
+This scaffold currently keeps route data in an in-memory store in `src/config/database.js` so Flutter integration can begin quickly. For production, move the controller data calls to `src/services/firestoreService.js`.
 
 Password is hashed in this demo store. In production, prefer Firebase Auth or bcrypt/argon2 with a real user table. Never store plain text passwords.
+
+Protected APIs support the demo JWT token. They are also ready to accept Firebase Auth ID tokens after `FIREBASE_SERVICE_ACCOUNT_PATH` is configured and the Firebase user has a matching backend profile document/user record.
 
 ## Important Security Behavior
 
