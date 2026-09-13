@@ -1,20 +1,20 @@
-const { db } = require("../config/database");
 const { fail, ok } = require("../utils/http");
 const { currentTutor } = require("../services/permissionService");
+const store = require("../services/firestoreService");
 
-function meStudents(req, res, next) {
+async function meStudents(req, res, next) {
   try {
-    const tutor = currentTutor(req.user.id);
+    const tutor = await currentTutor(req.user.id);
     if (!tutor) throw fail(404, "Tutor not found", "TUTOR_NOT_FOUND");
-    return ok(res, "Tutor students fetched successfully", { students: db.students.filter((item) => item.tutorId === tutor.id) });
+    return ok(res, "Tutor students fetched successfully", { students: await store.listDocs("students", [["tutorId", "==", tutor.id]]) });
   } catch (error) {
     next(error);
   }
 }
 
-function meClasses(req, res, next) {
+async function meClasses(req, res, next) {
   try {
-    const tutor = currentTutor(req.user.id);
+    const tutor = await currentTutor(req.user.id);
     if (!tutor) throw fail(404, "Tutor not found", "TUTOR_NOT_FOUND");
     return ok(res, "Tutor classes fetched successfully", { classes: tutor.classes || [] });
   } catch (error) {

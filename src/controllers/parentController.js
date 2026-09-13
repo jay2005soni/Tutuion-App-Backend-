@@ -1,11 +1,11 @@
-const { db } = require("../config/database");
 const { fail, ok } = require("../utils/http");
 const { currentParent } = require("../services/permissionService");
 const { safeUser } = require("./authController");
+const store = require("../services/firestoreService");
 
-function getProfile(req, res, next) {
+async function getProfile(req, res, next) {
   try {
-    const parent = currentParent(req.user.id);
+    const parent = await currentParent(req.user.id);
     if (!parent) throw fail(404, "Parent profile not found", "PARENT_NOT_FOUND");
     return ok(res, "Parent profile fetched successfully", { ...safeUser(req.user), parentId: parent.id });
   } catch (error) {
@@ -13,23 +13,25 @@ function getProfile(req, res, next) {
   }
 }
 
-function updateProfile(req, res, next) {
+async function updateProfile(req, res, next) {
   try {
     const { name, phone, email } = req.body;
-    if (name !== undefined) req.user.name = name;
-    if (phone !== undefined) req.user.phone = phone;
-    if (email !== undefined) req.user.email = email;
-    return ok(res, "Parent profile updated successfully", safeUser(req.user));
+    const updated = await store.updateDoc("users", req.user.id, {
+      name: name ?? req.user.name,
+      phone: phone ?? req.user.phone,
+      email: email ?? req.user.email,
+    });
+    return ok(res, "Parent profile updated successfully", safeUser(updated));
   } catch (error) {
     next(error);
   }
 }
 
-function myStudents(req, res, next) {
+async function myStudents(req, res, next) {
   try {
-    const parent = currentParent(req.user.id);
+    const parent = await currentParent(req.user.id);
     if (!parent) throw fail(404, "Parent profile not found", "PARENT_NOT_FOUND");
-    const students = db.students.filter((student) => student.parentId === parent.id);
+    const students = await store.listDocs("students", [["parentId", "==", parent.id]]);
     return ok(res, "Students fetched successfully", { students });
   } catch (error) {
     next(error);

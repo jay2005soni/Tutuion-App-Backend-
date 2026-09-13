@@ -1,15 +1,15 @@
-const { db, id } = require("../config/database");
 const { created, fail, ok } = require("../utils/http");
 const { requireStudentAccess } = require("../services/permissionService");
 const { percentage } = require("./dashboardController");
+const store = require("../services/firestoreService");
 
 const allowedStatuses = ["present", "absent", "holiday", "no_class"];
 
-function getAttendance(req, res, next) {
+async function getAttendance(req, res, next) {
   try {
-    const student = requireStudentAccess(req.user, req.params.studentId);
-    const records = db.attendance.filter((item) => {
-      if (item.studentId !== student.id) return false;
+    const student = await requireStudentAccess(req.user, req.params.studentId);
+    const allRecords = await store.listDocs("attendance", [["studentId", "==", student.id]]);
+    const records = allRecords.filter((item) => {
       if (req.query.month && Number(item.date.slice(5, 7)) !== Number(req.query.month)) return false;
       if (req.query.year && Number(item.date.slice(0, 4)) !== Number(req.query.year)) return false;
       return true;
@@ -29,40 +29,51 @@ function getAttendance(req, res, next) {
   }
 }
 
-function createAttendance(req, res, next) {
+async function createAttendance(req, res, next) {
   try {
     if (!allowedStatuses.includes(req.body.status)) throw fail(422, "Invalid attendance status", "VALIDATION_ERROR");
-    requireStudentAccess(req.user, req.body.studentId);
-    const record = { id: id("ATT"), studentId: req.body.studentId, date: req.body.date, status: req.body.status, markedBy: req.user.id };
-    db.attendance.push(record);
+    await requireStudentAccess(req.user, req.body.studentId);
+    const record = await store.createDoc("attendance", {
+      studentId: req.body.studentId,
+      date: req.body.date,
+      status: req.body.status,
+      markedBy: req.user.id,
+    }, store.makeId("ATT"));
     return created(res, "Attendance marked successfully", record);
   } catch (error) {
     next(error);
   }
 }
 
-function updateAttendance(req, res, next) {
+async function updateAttendance(req, res, next) {
   try {
-    const record = db.attendance.find((item) => item.id === req.params.attendanceId);
+    const record = await store.getDoc("attendance", req.params.attendanceId);
     if (!record) throw fail(404, "Attendance not found", "ATTENDANCE_NOT_FOUND");
-    requireStudentAccess(req.user, record.studentId);
+    await requireStudentAccess(req.user, record.studentId);
     if (req.body.status && !allowedStatuses.includes(req.body.status)) throw fail(422, "Invalid attendance status", "VALIDATION_ERROR");
-    record.date = req.body.date ?? record.date;
-    record.status = req.body.status ?? record.status;
-    return ok(res, "Attendance updated successfully", record);
+    const updated = await store.updateDoc("attendance", record.id, {
+      date: req.body.date ?? record.date,
+      status: req.body.status ?? record.status,
+    });
+    return ok(res, "Attendance updated successfully", updated);
   } catch (error) {
     next(error);
   }
 }
 
-function bulkAttendance(req, res, next) {
+async function bulkAttendance(req, res, next) {
   try {
-    const records = (req.body.records || []).map((item) => {
+    const records = [];
+    for (const item of req.body.records || []) {
       if (!allowedStatuses.includes(item.status)) throw fail(422, "Invalid attendance status", "VALIDATION_ERROR");
-      requireStudentAccess(req.user, item.studentId);
-      return { id: id("ATT"), studentId: item.studentId, date: req.body.date, status: item.status, markedBy: req.user.id };
-    });
-    db.attendance.push(...records);
+      await requireStudentAccess(req.user, item.studentId);
+      records.push(await store.createDoc("attendance", {
+        studentId: item.studentId,
+        date: req.body.date,
+        status: item.status,
+        markedBy: req.user.id,
+      }, store.makeId("ATT")));
+    }
     return created(res, "Bulk attendance marked successfully", { records });
   } catch (error) {
     next(error);

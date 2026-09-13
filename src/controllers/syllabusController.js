@@ -1,12 +1,11 @@
-const { db } = require("../config/database");
 const { ok } = require("../utils/http");
 const { requireStudentAccess } = require("../services/permissionService");
+const store = require("../services/firestoreService");
 
-function getSyllabus(req, res, next) {
+async function getSyllabus(req, res, next) {
   try {
-    requireStudentAccess(req.user, req.params.studentId);
-    const subjects = db.syllabus
-      .filter((item) => item.studentId === req.params.studentId)
+    await requireStudentAccess(req.user, req.params.studentId);
+    const subjects = (await store.listDocs("syllabus", [["studentId", "==", req.params.studentId]]))
       .map((item) => ({ ...item, percentage: item.total ? Math.round((item.completed / item.total) * 100) : 0 }));
     return ok(res, "Syllabus fetched successfully", { subjects });
   } catch (error) {

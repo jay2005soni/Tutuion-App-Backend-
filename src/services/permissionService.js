@@ -1,26 +1,26 @@
-const { db } = require("../config/database");
 const { fail } = require("../utils/http");
+const store = require("./firestoreService");
 
-function currentParent(userId) {
-  return db.parents.find((parent) => parent.userId === userId);
+async function currentParent(userId) {
+  return store.findOne("parents", [["userId", "==", userId]]);
 }
 
-function currentTutor(userId) {
-  return db.tutors.find((tutor) => tutor.userId === userId);
+async function currentTutor(userId) {
+  return store.findOne("tutors", [["userId", "==", userId]]);
 }
 
-function canAccessStudent(user, student) {
+async function canAccessStudent(user, student) {
   if (!student) return false;
   if (user.role === "ADMIN") return true;
-  if (user.role === "PARENT") return currentParent(user.id)?.id === student.parentId;
-  if (user.role === "TUTOR") return currentTutor(user.id)?.id === student.tutorId;
+  if (user.role === "PARENT") return (await currentParent(user.id))?.id === student.parentId;
+  if (user.role === "TUTOR") return (await currentTutor(user.id))?.id === student.tutorId;
   return false;
 }
 
-function requireStudentAccess(user, studentId) {
-  const student = db.students.find((item) => item.id === studentId);
+async function requireStudentAccess(user, studentId) {
+  const student = await store.getDoc("students", studentId);
   if (!student) throw fail(404, "Student not found", "STUDENT_NOT_FOUND");
-  if (!canAccessStudent(user, student)) throw fail(403, "Forbidden", "FORBIDDEN");
+  if (!(await canAccessStudent(user, student))) throw fail(403, "Forbidden", "FORBIDDEN");
   return student;
 }
 

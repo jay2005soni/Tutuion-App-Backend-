@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "check": "node --check src/server.js"
+    "check": "node --check src/server.js",
+    "seed:firebase": "node scripts/seedFirebase.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

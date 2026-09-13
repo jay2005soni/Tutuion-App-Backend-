@@ -1,26 +1,31 @@
-const { db, id } = require("../config/database");
 const { created, fail, ok } = require("../utils/http");
 const { requireStudentAccess } = require("../services/permissionService");
+const store = require("../services/firestoreService");
 
-function createNote(req, res) {
-  const note = { id: id("NOTE"), ...req.body };
-  db.notes.push(note);
+async function createNote(req, res, next) {
+  try {
+  const note = await store.createDoc("notes", req.body, store.makeId("NOTE"));
   return created(res, "Note created successfully", note);
+  } catch (error) {
+    next(error);
+  }
 }
 
-function getStudentNotes(req, res, next) {
+async function getStudentNotes(req, res, next) {
   try {
-    const student = requireStudentAccess(req.user, req.params.studentId);
-    const notes = db.notes.filter((item) => item.class === student.class && (!req.query.subject || item.subject === req.query.subject));
+    const student = await requireStudentAccess(req.user, req.params.studentId);
+    const filters = [["class", "==", student.class]];
+    if (req.query.subject) filters.push(["subject", "==", req.query.subject]);
+    const notes = await store.listDocs("notes", filters);
     return ok(res, "Notes fetched successfully", { notes });
   } catch (error) {
     next(error);
   }
 }
 
-function noteDetail(req, res, next) {
+async function noteDetail(req, res, next) {
   try {
-    const note = db.notes.find((item) => item.id === req.params.noteId);
+    const note = await store.getDoc("notes", req.params.noteId);
     if (!note) throw fail(404, "Note not found", "NOTE_NOT_FOUND");
     return ok(res, "Note fetched successfully", note);
   } catch (error) {
@@ -28,11 +33,11 @@ function noteDetail(req, res, next) {
   }
 }
 
-function deleteNote(req, res, next) {
+async function deleteNote(req, res, next) {
   try {
-    const index = db.notes.findIndex((item) => item.id === req.params.noteId);
-    if (index === -1) throw fail(404, "Note not found", "NOTE_NOT_FOUND");
-    const [note] = db.notes.splice(index, 1);
+    const note = await store.getDoc("notes", req.params.noteId);
+    if (!note) throw fail(404, "Note not found", "NOTE_NOT_FOUND");
+    await store.deleteDoc("notes", note.id);
     return ok(res, "Note deleted successfully", note);
   } catch (error) {
     next(error);

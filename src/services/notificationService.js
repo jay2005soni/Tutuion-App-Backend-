@@ -1,9 +1,7 @@
-const { db, id } = require("../config/database");
+const store = require("./firestoreService");
 
-function createNotification(userId, title, message) {
-  const notification = { id: id("N"), userId, title, message, isRead: false, createdAt: new Date().toISOString() };
-  db.notifications.push(notification);
-  return notification;
+async function createNotification(userId, title, message) {
+  return store.createDoc("notifications", { userId, title, message, isRead: false }, store.makeId("N"));
 }
 
 function sendPushPlaceholder(notification) {

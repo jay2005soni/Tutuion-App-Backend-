@@ -42,6 +42,7 @@ Copy `.env.example` to `.env` and fill:
 FIREBASE_PROJECT_ID=your-firebase-project-id
 FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
 FIREBASE_STORAGE_BUCKET=your-firebase-project-id.appspot.com
+FIREBASE_WEB_API_KEY=your-firebase-web-api-key
 ```
 
 ## 5. Backend Files Added
@@ -50,6 +51,23 @@ FIREBASE_STORAGE_BUCKET=your-firebase-project-id.appspot.com
 - `src/config/firebaseCollections.js`: keeps collection names centralized.
 - `src/services/firestoreService.js`: reusable Firestore CRUD helpers.
 - `firebase-service-account.example.json`: dummy example only.
+
+## 5.1 Seed Demo Data
+
+After `.env` and `serviceAccountKey.json` are ready:
+
+```bash
+npm run seed:firebase
+```
+
+This creates demo Firebase Auth users and Firestore documents:
+
+```text
+Parent: rahul@gmail.com / parent123
+Tutor: tutor@tuition.local / tutor123
+Admin: admin@tuition.local / admin123
+Student ID: STU_demo
+```
 
 ## 6. Suggested Firestore Collections
 

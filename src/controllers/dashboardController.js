@@ -1,6 +1,6 @@
-const { db } = require("../config/database");
 const { ok } = require("../utils/http");
 const { currentParent, requireStudentAccess } = require("../services/permissionService");
+const store = require("../services/firestoreService");
 
 function percentage(values) {
   const counted = values.filter((item) => ["present", "absent"].includes(item.status));
@@ -8,19 +8,21 @@ function percentage(values) {
   return Number(((counted.filter((item) => item.status === "present").length / counted.length) * 100).toFixed(2));
 }
 
-function parentDashboard(req, res, next) {
+async function parentDashboard(req, res, next) {
   try {
-    const parent = currentParent(req.user.id);
+    const parent = await currentParent(req.user.id);
     const student = req.query.studentId
-      ? requireStudentAccess(req.user, req.query.studentId)
-      : db.students.find((item) => item.parentId === parent?.id);
+      ? await requireStudentAccess(req.user, req.query.studentId)
+      : (await store.listDocs("students", [["parentId", "==", parent?.id]])).at(0);
 
     if (!student) return ok(res, "Dashboard fetched successfully", { student: null, overview: {} });
 
-    const attendance = db.attendance.filter((item) => item.studentId === student.id);
-    const homework = db.homework.filter((item) => item.studentId === student.id);
-    const results = db.results.filter((item) => item.studentId === student.id);
-    const progress = db.progress.filter((item) => item.studentId === student.id);
+    const attendance = await store.listDocs("attendance", [["studentId", "==", student.id]]);
+    const homework = await store.listDocs("homework", [["studentId", "==", student.id]]);
+    const results = await store.listDocs("results", [["studentId", "==", student.id]]);
+    const progress = await store.listDocs("progress", [["studentId", "==", student.id]]);
+    const announcements = await store.listDocs("announcements");
+    const tests = await store.listDocs("tests", [["class", "==", student.class]]);
     const latestResult = results.at(-1);
 
     return ok(res, "Dashboard fetched successfully", {
@@ -33,8 +35,8 @@ function parentDashboard(req, res, next) {
       },
       todayAttendance: attendance.find((item) => item.date === new Date().toISOString().slice(0, 10)) || null,
       homework,
-      latestAnnouncement: db.announcements.at(-1) || null,
-      upcomingTest: db.tests.find((item) => item.class === student.class && item.date >= new Date().toISOString().slice(0, 10)) || null,
+      latestAnnouncement: announcements.at(-1) || null,
+      upcomingTest: tests.find((item) => item.date >= new Date().toISOString().slice(0, 10)) || null,
     });
   } catch (error) {
     next(error);

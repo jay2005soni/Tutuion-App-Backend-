@@ -6,6 +6,7 @@ const env = {
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || "",
   firebaseServiceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || "",
   firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || "",
+  firebaseWebApiKey: process.env.FIREBASE_WEB_API_KEY || "",
 };
 
 module.exports = { env };

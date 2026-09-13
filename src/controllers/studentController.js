@@ -1,14 +1,13 @@
-const { db, id } = require("../config/database");
 const { created, fail, ok } = require("../utils/http");
 const { requireStudentAccess } = require("../services/permissionService");
+const store = require("../services/firestoreService");
 
-function createStudent(req, res, next) {
+async function createStudent(req, res, next) {
   try {
     const { name, parentId } = req.body;
     if (!name || !parentId) throw fail(422, "name and parentId are required", "VALIDATION_ERROR");
-    if (!db.parents.some((parent) => parent.id === parentId)) throw fail(404, "Parent not found", "PARENT_NOT_FOUND");
-    const student = {
-      id: id("STU"),
+    if (!(await store.getDoc("parents", parentId))) throw fail(404, "Parent not found", "PARENT_NOT_FOUND");
+    const student = await store.createDoc("students", {
       name,
       class: req.body.class || null,
       section: req.body.section || null,
@@ -17,26 +16,25 @@ function createStudent(req, res, next) {
       tutorId: req.body.tutorId || null,
       subjects: req.body.subjects || [],
       status: req.body.status || "active",
-    };
-    db.students.push(student);
+    }, store.makeId("STU"));
     return created(res, "Student created successfully", student);
   } catch (error) {
     next(error);
   }
 }
 
-function getStudent(req, res, next) {
+async function getStudent(req, res, next) {
   try {
-    return ok(res, "Student fetched successfully", requireStudentAccess(req.user, req.params.studentId));
+    return ok(res, "Student fetched successfully", await requireStudentAccess(req.user, req.params.studentId));
   } catch (error) {
     next(error);
   }
 }
 
-function updateStudent(req, res, next) {
+async function updateStudent(req, res, next) {
   try {
-    const student = requireStudentAccess(req.user, req.params.studentId);
-    Object.assign(student, {
+    const student = await requireStudentAccess(req.user, req.params.studentId);
+    const updated = await store.updateDoc("students", student.id, {
       name: req.body.name ?? student.name,
       class: req.body.class ?? student.class,
       section: req.body.section ?? student.section,
@@ -46,20 +44,20 @@ function updateStudent(req, res, next) {
       subjects: req.body.subjects ?? student.subjects,
       status: req.body.status ?? student.status,
     });
-    return ok(res, "Student updated successfully", student);
+    return ok(res, "Student updated successfully", updated);
   } catch (error) {
     next(error);
   }
 }
 
-function updateStatus(req, res, next) {
+async function updateStatus(req, res, next) {
   try {
-    const student = requireStudentAccess(req.user, req.params.studentId);
+    const student = await requireStudentAccess(req.user, req.params.studentId);
     if (!["active", "inactive", "pending_assignment"].includes(req.body.status)) {
       throw fail(422, "Invalid student status", "VALIDATION_ERROR");
     }
-    student.status = req.body.status;
-    return ok(res, "Student status updated successfully", student);
+    const updated = await store.updateDoc("students", student.id, { status: req.body.status });
+    return ok(res, "Student status updated successfully", updated);
   } catch (error) {
     next(error);
   }

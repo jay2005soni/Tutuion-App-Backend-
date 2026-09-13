@@ -1,26 +1,30 @@
-const { db, id } = require("../config/database");
 const { created, fail, ok } = require("../utils/http");
-const { hashPassword, verifyPassword } = require("../utils/password");
-const { createToken } = require("../utils/token");
+const { getAuth } = require("../config/firebase");
+const store = require("../services/firestoreService");
+const { signInWithEmailPassword } = require("../services/firebaseAuthService");
 
 function safeUser(user) {
-  return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role };
+  return { id: user.id, firebaseUid: user.firebaseUid, name: user.name, email: user.email, phone: user.phone, role: user.role };
 }
 
-function register(req, res, next) {
+async function register(req, res, next) {
   try {
     const { parentName, email, phone, studentName, password } = req.body;
     if (!parentName || !email || !phone || !studentName || !password) {
       throw fail(422, "parentName, email, phone, studentName and password are required", "VALIDATION_ERROR");
     }
-    if (db.users.some((user) => user.email === email)) {
+    if (await store.findOne("users", [["email", "==", email]])) {
       throw fail(409, "Email already registered", "EMAIL_EXISTS");
     }
 
-    const user = { id: id("USR"), name: parentName, email, phone, role: "PARENT", passwordHash: hashPassword(password) };
-    const parent = { id: id("PAR"), userId: user.id };
-    const student = {
-      id: id("STU"),
+    const firebaseUser = await getAuth().createUser({ email, password, displayName: parentName, phoneNumber: phone.startsWith("+") ? phone : undefined });
+    const user = await store.createDoc(
+      "users",
+      { firebaseUid: firebaseUser.uid, name: parentName, email, phone, role: "PARENT" },
+      store.makeId("USR")
+    );
+    const parent = await store.createDoc("parents", { userId: user.id, firebaseUid: firebaseUser.uid }, store.makeId("PAR"));
+    const student = await store.createDoc("students", {
       name: studentName,
       class: null,
       section: null,
@@ -29,11 +33,7 @@ function register(req, res, next) {
       tutorId: null,
       subjects: [],
       status: "pending_assignment",
-    };
-
-    db.users.push(user);
-    db.parents.push(parent);
-    db.students.push(student);
+    }, store.makeId("STU"));
 
     return created(res, "Registration successful", { user: { id: user.id, role: user.role }, student });
   } catch (error) {
@@ -41,24 +41,29 @@ function register(req, res, next) {
   }
 }
 
-function login(req, res, next) {
+async function login(req, res, next) {
   try {
     const { email, password } = req.body;
-    const user = db.users.find((item) => item.email === email);
-    if (!user || !verifyPassword(password, user.passwordHash)) {
-      throw fail(401, "Invalid email or password", "INVALID_CREDENTIALS");
-    }
-    const token = createToken({ userId: user.id, role: user.role });
-    return ok(res, "Login successful", { token, user: { id: user.id, name: user.name, role: user.role } });
+    const authData = await signInWithEmailPassword(email, password);
+    const user = await store.findOne("users", [["firebaseUid", "==", authData.localId]]);
+    if (!user) throw fail(401, "User profile not found for Firebase account", "USER_PROFILE_NOT_FOUND");
+    return ok(res, "Login successful", {
+      token: authData.idToken,
+      refreshToken: authData.refreshToken,
+      expiresIn: authData.expiresIn,
+      user: { id: user.id, firebaseUid: user.firebaseUid, name: user.name, role: user.role },
+    });
   } catch (error) {
     next(error);
   }
 }
 
-function forgotPassword(req, res, next) {
+async function forgotPassword(req, res, next) {
   try {
-    if (!req.body.email) throw fail(422, "email is required", "VALIDATION_ERROR");
-    return ok(res, "Password reset email sent", {});
+    const { email } = req.body;
+    if (!email) throw fail(422, "email is required", "VALIDATION_ERROR");
+    const resetLink = await getAuth().generatePasswordResetLink(email);
+    return ok(res, "Password reset link generated successfully", { resetLink });
   } catch (error) {
     next(error);
   }

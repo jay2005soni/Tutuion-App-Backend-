@@ -30,6 +30,12 @@ Tutor: tutor@tuition.local / tutor123
 Admin: admin@tuition.local / admin123
 ```
 
+Create these users in Firebase with:
+
+```bash
+npm run seed:firebase
+```
+
 Send protected requests with:
 
 ```text
@@ -54,13 +60,11 @@ Authorization: Bearer <TOKEN>
 
 ## Firebase/Database Notes
 
-Firebase Admin SDK dependency and config files are now added. Read [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) before connecting a real project.
+Firebase Admin SDK dependency and config files are added. Read [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) before connecting a real project.
 
-This scaffold currently keeps route data in an in-memory store in `src/config/database.js` so Flutter integration can begin quickly. For production, move the controller data calls to `src/services/firestoreService.js`.
+All route data now reads/writes through Firestore using `src/services/firestoreService.js`. Auth uses Firebase Auth ID tokens.
 
-Password is hashed in this demo store. In production, prefer Firebase Auth or bcrypt/argon2 with a real user table. Never store plain text passwords.
-
-Protected APIs support the demo JWT token. They are also ready to accept Firebase Auth ID tokens after `FIREBASE_SERVICE_ACCOUNT_PATH` is configured and the Firebase user has a matching backend profile document/user record.
+Do not store plain passwords in Firestore.
 
 ## Important Security Behavior
 
