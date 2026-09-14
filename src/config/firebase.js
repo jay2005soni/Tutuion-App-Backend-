@@ -1,28 +1,47 @@
-const { applicationDefault, cert, getApp, getApps, initializeApp } = require("firebase-admin/app");
-const { getAuth: firebaseGetAuth } = require("firebase-admin/auth");
-const { getFirestore: firebaseGetFirestore } = require("firebase-admin/firestore");
-const { getStorage } = require("firebase-admin/storage");
-const path = require("path");
+const {
+  getApp,
+  getApps,
+  initializeApp,
+  cert,
+} = require("firebase-admin/app");
+
+const {
+  getAuth: firebaseGetAuth,
+} = require("firebase-admin/auth");
+
+const {
+  getFirestore: firebaseGetFirestore,
+} = require("firebase-admin/firestore");
+
+const {
+  getStorage,
+} = require("firebase-admin/storage");
+
 const { env } = require("./env");
 
 function initializeFirebase() {
-  if (getApps().length) return getApp();
-
-  const options = {};
-
-  if (env.firebaseServiceAccountPath) {
-    const serviceAccountPath = path.resolve(process.cwd(), env.firebaseServiceAccountPath);
-    const serviceAccount = require(serviceAccountPath);
-    options.credential = cert(serviceAccount);
-  } else {
-    options.credential = applicationDefault();
+  if (getApps().length) {
+    return getApp();
   }
 
-  if (env.firebaseStorageBucket) {
-    options.storageBucket = env.firebaseStorageBucket;
+  if (
+    !env.firebaseProjectId ||
+    !env.firebaseClientEmail ||
+    !env.firebasePrivateKey
+  ) {
+    throw new Error(
+      "Firebase Admin credentials are missing. Check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY."
+    );
   }
 
-  return initializeApp(options);
+  return initializeApp({
+    credential: cert({
+      projectId: env.firebaseProjectId,
+      clientEmail: env.firebaseClientEmail,
+      privateKey: env.firebasePrivateKey,
+    }),
+    storageBucket: env.firebaseStorageBucket || undefined,
+  });
 }
 
 function getFirebaseAdmin() {
@@ -41,4 +60,10 @@ function getStorageBucket() {
   return getStorage(getFirebaseAdmin()).bucket();
 }
 
-module.exports = { initializeFirebase, getFirebaseAdmin, getFirestore, getAuth, getStorageBucket };
+module.exports = {
+  initializeFirebase,
+  getFirebaseAdmin,
+  getFirestore,
+  getAuth,
+  getStorageBucket,
+};
