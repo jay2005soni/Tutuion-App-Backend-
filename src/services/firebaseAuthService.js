@@ -28,7 +28,8 @@ async function signInWithEmailPassword(email, password) {
 
   const data = await response.json();
   if (!response.ok) {
-    throw fail(401, "Invalid email or password", "INVALID_CREDENTIALS");
+    const firebaseMessage = data?.error?.message || "INVALID_CREDENTIALS";
+    throw fail(401, `Firebase login failed: ${firebaseMessage}`, "INVALID_CREDENTIALS");
   }
 
   return data;

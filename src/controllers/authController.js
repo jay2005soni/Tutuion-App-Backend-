@@ -2,6 +2,7 @@ const { created, fail, ok } = require("../utils/http");
 const { getAuth } = require("../config/firebase");
 const store = require("../services/firestoreService");
 const { signInWithEmailPassword } = require("../services/firebaseAuthService");
+const { ensureProfileFromUid } = require("../services/userProfileService");
 
 function safeUser(user) {
   return { id: user.id, firebaseUid: user.firebaseUid, name: user.name, email: user.email, phone: user.phone, role: user.role };
@@ -13,17 +14,18 @@ async function register(req, res, next) {
     if (!parentName || !email || !phone || !studentName || !password) {
       throw fail(422, "parentName, email, phone, studentName and password are required", "VALIDATION_ERROR");
     }
-    if (await store.findOne("users", [["email", "==", email]])) {
-      throw fail(409, "Email already registered", "EMAIL_EXISTS");
+    let firebaseUser;
+    try {
+      firebaseUser = await getAuth().getUserByEmail(email);
+    } catch (error) {
+      firebaseUser = await getAuth().createUser({ email, password, displayName: parentName, phoneNumber: phone.startsWith("+") ? phone : undefined });
     }
 
-    const firebaseUser = await getAuth().createUser({ email, password, displayName: parentName, phoneNumber: phone.startsWith("+") ? phone : undefined });
-    const user = await store.createDoc(
-      "users",
-      { firebaseUid: firebaseUser.uid, name: parentName, email, phone, role: "PARENT" },
-      store.makeId("USR")
-    );
-    const parent = await store.createDoc("parents", { userId: user.id, firebaseUid: firebaseUser.uid }, store.makeId("PAR"));
+    const user = await ensureProfileFromUid(firebaseUser.uid, { name: parentName, email, phone, role: "PARENT" });
+    let parent = await store.findOne("parents", [["userId", "==", user.id]]);
+    if (!parent) {
+      parent = await store.createDoc("parents", { userId: user.id, firebaseUid: firebaseUser.uid }, store.makeId("PAR"));
+    }
     const student = await store.createDoc("students", {
       name: studentName,
       class: null,
@@ -45,8 +47,7 @@ async function login(req, res, next) {
   try {
     const { email, password } = req.body;
     const authData = await signInWithEmailPassword(email, password);
-    const user = await store.findOne("users", [["firebaseUid", "==", authData.localId]]);
-    if (!user) throw fail(401, "User profile not found for Firebase account", "USER_PROFILE_NOT_FOUND");
+    const user = await ensureProfileFromUid(authData.localId, { email, role: "PARENT" });
     return ok(res, "Login successful", {
       token: authData.idToken,
       refreshToken: authData.refreshToken,

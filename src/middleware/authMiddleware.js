@@ -1,6 +1,6 @@
 const { fail } = require("../utils/http");
 const { verifyFirebaseIdToken } = require("../services/firebaseAuthService");
-const store = require("../services/firestoreService");
+const { ensureUserProfile } = require("../services/userProfileService");
 
 async function authenticate(req, res, next) {
   try {
@@ -9,8 +9,7 @@ async function authenticate(req, res, next) {
     const firebaseUser = await verifyFirebaseIdToken(token);
     if (!firebaseUser) return next(fail(401, "Unauthorized access", "UNAUTHORIZED"));
 
-    const user = await store.findOne("users", [["firebaseUid", "==", firebaseUser.uid]]);
-    if (!user) return next(fail(401, "User profile not found for Firebase token", "USER_PROFILE_NOT_FOUND"));
+    const user = await ensureUserProfile(firebaseUser, { role: "PARENT" });
 
     req.firebaseUser = firebaseUser;
     req.user = user;
