@@ -1,4 +1,4 @@
-const { ok, fail } = require("../utils/http");
+const { ok } = require("../utils/http");
 const store = require("../services/firestoreService");
 
 // =====================================================
@@ -7,35 +7,35 @@ const store = require("../services/firestoreService");
 
 async function getAndroidUpdate(req, res, next) {
   try {
-    const update = await store.getDoc(
+    let update = await store.getDoc(
       "app_update",
       "android"
     );
 
-    // Document doesn't exist
+    // =================================================
+    // AUTO CREATE DEFAULT DOCUMENT
+    // =================================================
+
     if (!update) {
-      return ok(
-        res,
-        "No app update is currently available",
+      update = await store.createDoc(
+        "app_update",
         {
-          latestVersion: "",
+          latestVersion: "1.0.0",
           apkUrl: "",
-        }
+        },
+        "android"
       );
     }
-
-    const latestVersion =
-      update.latestVersion?.toString().trim() || "";
-
-    const apkUrl =
-      update.apkUrl?.toString().trim() || "";
 
     return ok(
       res,
       "Android app update information fetched successfully",
       {
-        latestVersion,
-        apkUrl,
+        latestVersion:
+          update.latestVersion?.toString() || "",
+
+        apkUrl:
+          update.apkUrl?.toString() || "",
       }
     );
   } catch (error) {
