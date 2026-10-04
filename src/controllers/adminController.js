@@ -132,7 +132,7 @@ async function listParents(req, res, next) {
         // ---------------------------------------------
         if (
           parent.userId &&
-          String(parent.userId).trim().isNotEmpty
+          String(parent.userId).trim().length > 0
         ) {
           user = await store.getDoc(
             "users",
@@ -145,7 +145,7 @@ async function listParents(req, res, next) {
         // ---------------------------------------------
         if (
           parent.id &&
-          String(parent.id).trim().isNotEmpty
+          String(parent.id).trim().length > 0
         ) {
           students = await store.listDocs(
             "students",
