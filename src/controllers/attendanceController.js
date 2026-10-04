@@ -61,6 +61,28 @@ async function updateAttendance(req, res, next) {
   }
 }
 
+async function listAttendance(req, res, next) {
+  try {
+    const filters = [];
+
+    if (req.query.date) {
+      filters.push(["date", "==", req.query.date]);
+    }
+
+    const records = await store.listDocs("attendance", filters);
+
+    return ok(
+      res,
+      "Attendance records fetched successfully",
+      {
+        records,
+      }
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function bulkAttendance(req, res, next) {
   try {
     const records = [];
