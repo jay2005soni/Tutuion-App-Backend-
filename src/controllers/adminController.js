@@ -114,6 +114,9 @@ async function deactivateStudent(req, res, next) {
 // =====================================================
 // LIST ALL PARENTS
 // =====================================================
+// =====================================================
+// LIST ALL PARENTS
+// =====================================================
 
 async function listParents(req, res, next) {
   try {
@@ -121,15 +124,40 @@ async function listParents(req, res, next) {
 
     const data = await Promise.all(
       parents.map(async (parent) => {
-        const user = await store.getDoc(
-          "users",
-          parent.userId
-        );
+        let user = null;
+        let students = [];
 
-        const students = await store.listDocs(
-          "students",
-          [["parentId", "==", parent.id]]
-        );
+        // ---------------------------------------------
+        // Get parent user safely
+        // ---------------------------------------------
+        if (
+          parent.userId &&
+          String(parent.userId).trim().isNotEmpty
+        ) {
+          user = await store.getDoc(
+            "users",
+            String(parent.userId).trim()
+          );
+        }
+
+        // ---------------------------------------------
+        // Get children safely
+        // ---------------------------------------------
+        if (
+          parent.id &&
+          String(parent.id).trim().isNotEmpty
+        ) {
+          students = await store.listDocs(
+            "students",
+            [
+              [
+                "parentId",
+                "==",
+                String(parent.id).trim(),
+              ],
+            ]
+          );
+        }
 
         return {
           ...parent,
@@ -150,8 +178,6 @@ async function listParents(req, res, next) {
     next(error);
   }
 }
-
-
 // =====================================================
 // UPDATE PARENT
 // =====================================================
