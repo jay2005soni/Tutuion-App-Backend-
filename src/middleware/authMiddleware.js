@@ -1,22 +1,67 @@
-const { fail } = require("../utils/http");
-const { verifyFirebaseIdToken } = require("../services/firebaseAuthService");
-const { ensureUserProfile } = require("../services/userProfileService");
+const {
+  fail,
+} = require("../utils/http");
 
-async function authenticate(req, res, next) {
+const {
+  verifyFirebaseIdToken,
+} = require("../services/firebaseAuthService");
+
+const {
+  ensureUserProfile,
+} = require("../services/userProfileService");
+
+
+async function authenticate(
+  req,
+  res,
+  next
+) {
   try {
-    const header = req.headers.authorization || "";
-    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-    const firebaseUser = await verifyFirebaseIdToken(token);
-    if (!firebaseUser) return next(fail(401, "Unauthorized access", "UNAUTHORIZED"));
+    const header =
+      req.headers.authorization ||
+      "";
 
-    const user = await ensureUserProfile(firebaseUser, { role: "PARENT" });
+    const token =
+      header.startsWith("Bearer ")
+        ? header.slice(7)
+        : null;
 
-    req.firebaseUser = firebaseUser;
-    req.user = user;
+    const firebaseUser =
+      await verifyFirebaseIdToken(
+        token
+      );
+
+    if (!firebaseUser) {
+      return next(
+        fail(
+          401,
+          "Unauthorized access",
+          "UNAUTHORIZED"
+        )
+      );
+    }
+
+    const user =
+      await ensureUserProfile(
+        firebaseUser,
+        {
+          role: "PARENT",
+        }
+      );
+
+    req.firebaseUser =
+      firebaseUser;
+
+    req.user =
+      user;
+
     return next();
   } catch (error) {
     next(error);
   }
 }
 
-module.exports = { authenticate };
+
+module.exports = {
+  authenticate,
+};
