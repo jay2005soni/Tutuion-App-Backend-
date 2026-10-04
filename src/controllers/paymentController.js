@@ -1,9 +1,82 @@
 const crypto = require("crypto");
 
-const razorpay = require("../services/razorpayService");
-const store = require("../services/firestoreService");
-const { ok, created } = require("../utils/http");
-const { requireStudentAccess } = require("../services/permissionService");
+const razorpay =
+  require("../services/razorpayService");
+
+const store =
+  require("../services/firestoreService");
+
+const {
+  ok,
+  created,
+} = require("../utils/http");
+
+const {
+  requireStudentAccess,
+} = require("../services/permissionService");
+
+
+// =====================================================
+// PAYMENT HISTORY
+// =====================================================
+
+async function paymentHistory(req, res, next) {
+  try {
+    const { studentId } = req.params;
+
+    if (!studentId) {
+      return res.status(400).json({
+        success: false,
+        message: "studentId is required",
+      });
+    }
+
+    // Check whether logged-in user can access this student
+    await requireStudentAccess(
+      req.user,
+      studentId
+    );
+
+    const payments =
+      await store.listDocs(
+        "payments",
+        [
+          ["studentId", "==", studentId],
+        ]
+      );
+
+    // Sort latest payment first
+    payments.sort((a, b) => {
+      const dateA = new Date(
+        a.paymentDate ||
+        a.createdAt ||
+        0
+      ).getTime();
+
+      const dateB = new Date(
+        b.paymentDate ||
+        b.createdAt ||
+        0
+      ).getTime();
+
+      return dateB - dateA;
+    });
+
+    return ok(
+      res,
+      "Payment history fetched successfully",
+      payments
+    );
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+// =====================================================
+// CREATE RAZORPAY ORDER
+// =====================================================
 
 async function createOrder(req, res, next) {
   try {
@@ -16,7 +89,11 @@ async function createOrder(req, res, next) {
       });
     }
 
-    const fee = await store.getDoc("fees", feeId);
+    const fee =
+      await store.getDoc(
+        "fees",
+        feeId
+      );
 
     if (!fee) {
       return res.status(404).json({
@@ -25,14 +102,14 @@ async function createOrder(req, res, next) {
       });
     }
 
+    // Check student access
     await requireStudentAccess(
       req.user,
       fee.studentId
     );
 
-    const dueAmount = Number(
-      fee.dueAmount ?? 0
-    );
+    const dueAmount =
+      Number(fee.dueAmount ?? 0);
 
     if (dueAmount <= 0) {
       return res.status(400).json({
@@ -41,19 +118,20 @@ async function createOrder(req, res, next) {
       });
     }
 
-    // Razorpay amount is in paise.
     const amountInPaise =
       Math.round(dueAmount * 100);
 
-    const order = await razorpay.orders.create({
-      amount: amountInPaise,
-      currency: "INR",
-      receipt: `fee_${feeId}`,
-      notes: {
-        feeId,
-        studentId: fee.studentId,
-      },
-    });
+    const order =
+      await razorpay.orders.create({
+        amount: amountInPaise,
+        currency: "INR",
+        receipt: `fee_${feeId}_${Date.now()}`,
+
+        notes: {
+          feeId,
+          studentId: fee.studentId,
+        },
+      });
 
     return created(
       res,
@@ -62,17 +140,24 @@ async function createOrder(req, res, next) {
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
+
         keyId:
           process.env.RAZORPAY_KEY_ID,
+
         feeId,
-        studentId:
-          fee.studentId,
+        studentId: fee.studentId,
       }
     );
+
   } catch (error) {
     next(error);
   }
 }
+
+
+// =====================================================
+// VERIFY RAZORPAY PAYMENT
+// =====================================================
 
 async function verifyPayment(req, res, next) {
   try {
@@ -109,11 +194,13 @@ async function verifyPayment(req, res, next) {
       });
     }
 
+    // Check student access
     await requireStudentAccess(
       req.user,
       fee.studentId
     );
 
+    // Generate Razorpay signature
     const generatedSignature =
       crypto
         .createHmac(
@@ -136,6 +223,7 @@ async function verifyPayment(req, res, next) {
       });
     }
 
+    // Fetch payment from Razorpay
     const payment =
       await razorpay.payments.fetch(
         razorpay_payment_id
@@ -163,10 +251,11 @@ async function verifyPayment(req, res, next) {
     const newPaid =
       currentPaid + paidAmount;
 
-    const newDue = Math.max(
-      currentDue - paidAmount,
-      0
-    );
+    const newDue =
+      Math.max(
+        currentDue - paidAmount,
+        0
+      );
 
     let status = "pending";
 
@@ -176,6 +265,7 @@ async function verifyPayment(req, res, next) {
       status = "partial";
     }
 
+    // Update fee
     await store.updateDoc(
       "fees",
       feeId,
@@ -186,6 +276,7 @@ async function verifyPayment(req, res, next) {
       }
     );
 
+    // Save payment history
     const paymentRecord =
       await store.createDoc(
         "payments",
@@ -216,6 +307,7 @@ async function verifyPayment(req, res, next) {
           razorpayPaymentId:
             razorpay_payment_id,
         },
+
         store.makeId("PAY")
       );
 
@@ -223,22 +315,32 @@ async function verifyPayment(req, res, next) {
       res,
       "Payment verified successfully",
       {
-        payment: paymentRecord,
+        payment:
+          paymentRecord,
 
         fee: {
           id: feeId,
-          paidAmount: newPaid,
-          dueAmount: newDue,
+          paidAmount:
+            newPaid,
+          dueAmount:
+            newDue,
           status,
         },
       }
     );
+
   } catch (error) {
     next(error);
   }
 }
 
+
+// =====================================================
+// EXPORTS
+// =====================================================
+
 module.exports = {
+  paymentHistory,
   createOrder,
   verifyPayment,
 };
