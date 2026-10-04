@@ -17,5 +17,9 @@ router.use("/notifications", require("./notificationRoutes"));
 router.use("/profile", require("./profileRoutes"));
 router.use("/tutors", require("./tutorRoutes"));
 router.use("/admin", require("./adminRoutes"));
+router.use(
+  "/app-update",
+  require("./appUpdateRoutes")
+);
 
 module.exports = router;
