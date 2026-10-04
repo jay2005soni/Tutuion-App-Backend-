@@ -83,6 +83,7 @@ async function listAttendance(req, res, next) {
   }
 }
 
+
 async function bulkAttendance(req, res, next) {
   try {
     const records = [];
@@ -102,4 +103,10 @@ async function bulkAttendance(req, res, next) {
   }
 }
 
-module.exports = { getAttendance, createAttendance, updateAttendance, bulkAttendance };
+module.exports = {
+  getAttendance,
+  createAttendance,
+  updateAttendance,
+  bulkAttendance,
+  listAttendance,
+};
